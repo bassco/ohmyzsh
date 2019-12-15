@@ -33,6 +33,7 @@ KUBE_PS1_BINARY="${KUBE_PS1_BINARY:-kubectl}"
 KUBE_PS1_SYMBOL_ENABLE="${KUBE_PS1_SYMBOL_ENABLE:-true}"
 KUBE_PS1_SYMBOL_DEFAULT="${KUBE_PS1_SYMBOL_DEFAULT:-\u2388 }"
 KUBE_PS1_SYMBOL_USE_IMG="${KUBE_PS1_SYMBOL_USE_IMG:-false}"
+KUBE_PS1_CTX_ENABLE="${KUBE_PS1_CTX_ENABLE:-true}"
 KUBE_PS1_NS_ENABLE="${KUBE_PS1_NS_ENABLE:-true}"
 KUBE_PS1_SEPARATOR="${KUBE_PS1_SEPARATOR-|}"
 KUBE_PS1_DIVIDER="${KUBE_PS1_DIVIDER-:}"
@@ -40,6 +41,8 @@ KUBE_PS1_PREFIX="${KUBE_PS1_PREFIX-(}"
 KUBE_PS1_SUFFIX="${KUBE_PS1_SUFFIX-)}"
 KUBE_PS1_LAST_TIME=0
 KUBE_PS1_ENABLED=true
+KUBE_PS1_CLUSTER_FUNCTION="${KUBE_PS1_CLUSTER_FUNCTION}"
+KUBE_PS1_NAMESPACE_FUNCTION="${KUBE_PS1_NAMESPACE_FUNCTION}"
 
 KUBE_PS1_COLOR_SYMBOL="%{$fg[blue]%}"
 KUBE_PS1_COLOR_CONTEXT="%{$fg[red]%}"
@@ -96,7 +99,7 @@ _kube_ps1_update_cache() {
     return
   fi
 
-  if [[ "${KUBECONFIG}" != "${KUBE_PS1_KUBECONFIG_CACHE}" ]]; then
+  if [[ "${KUBECONFIG}" != "${KUBE_PS1_KUBECONFIG_CACHE}" || "${KUBE_PS1_DISABLE_CACHE}" == true ]]; then
     # User changed KUBECONFIG; unconditionally refetch.
     KUBE_PS1_KUBECONFIG_CACHE=${KUBECONFIG}
     _kube_ps1_get_context_ns
@@ -115,24 +118,40 @@ _kube_ps1_update_cache() {
   done
 }
 
+_kube_ps1_get_context() {
+  if [[ "${KUBE_PS1_CTX_ENABLE}" == true ]]; then
+    KUBE_PS1_CONTEXT="$(${KUBE_PS1_BINARY} config current-context 2>/dev/null)"
+    # Set namespace to 'N/A' if it is not defined
+    KUBE_PS1_CONTEXT="${KUBE_PS1_CONTEXT:-N/A}"
+
+    if [[ ! -z "${KUBE_PS1_CLUSTER_FUNCTION}" ]]; then
+      KUBE_PS1_CONTEXT=$($KUBE_PS1_CLUSTER_FUNCTION $KUBE_PS1_CONTEXT)
+    fi
+  fi
+}
+
+_kube_ps1_get_ns() {
+  if [[ "${KUBE_PS1_NS_ENABLE}" == true ]]; then
+    KUBE_PS1_NAMESPACE="$(${KUBE_PS1_BINARY} config view --minify --output 'jsonpath={..namespace}' 2>/dev/null)"
+    # Set namespace to 'default' if it is not defined
+    KUBE_PS1_NAMESPACE="${KUBE_PS1_NAMESPACE:-default}"
+
+    if [[ ! -z "${KUBE_PS1_NAMESPACE_FUNCTION}" ]]; then
+        KUBE_PS1_NAMESPACE=$($KUBE_PS1_NAMESPACE_FUNCTION $KUBE_PS1_NAMESPACE)
+    fi
+  fi
+}
+
 _kube_ps1_get_context_ns() {
 
   # Set the command time
   KUBE_PS1_LAST_TIME=$EPOCHSECONDS
 
-  KUBE_PS1_CONTEXT="$(${KUBE_PS1_BINARY} config current-context 2>/dev/null)"
-  if [[ -z "${KUBE_PS1_CONTEXT}" ]]; then
-    KUBE_PS1_CONTEXT="N/A"
-    KUBE_PS1_NAMESPACE="N/A"
-    return
-  elif [[ "${KUBE_PS1_NS_ENABLE}" == true ]]; then
-    KUBE_PS1_NAMESPACE="$(${KUBE_PS1_BINARY} config view --minify --output 'jsonpath={..namespace}' 2>/dev/null)"
-    # Set namespace to 'default' if it is not defined
-    KUBE_PS1_NAMESPACE="${KUBE_PS1_NAMESPACE:-default}"
-  fi
+  _kube_ps1_get_context
+  _kube_ps1_get_ns
 }
 
-# function to disable the prompt on the current shell
+# function to enable the prompt on the current shell
 kubeon(){
   KUBE_PS1_ENABLED=true
 }
@@ -146,14 +165,33 @@ kubeoff(){
 kube_ps1 () {
   local reset_color="%{$reset_color%}"
   [[ ${KUBE_PS1_ENABLED} != 'true' ]] && return
+  [[ -z "${KUBE_PS1_CONTEXT}" ]] && [[ "${KUBE_PS1_CTX_ENABLE}" == true ]] && return
 
-  KUBE_PS1="${reset_color}$KUBE_PS1_PREFIX"
+  # Prefix
+  [[ -n "${KUBE_PS1_PREFIX}" ]] && KUBE_PS1+="${reset_color}${KUBE_PS1_PREFIX}"
+
+  # Symbol
   KUBE_PS1+="${KUBE_PS1_COLOR_SYMBOL}$(_kube_ps1_symbol)"
+
+  # Separator
   KUBE_PS1+="${reset_color}$KUBE_PS1_SEPERATOR"
-  KUBE_PS1+="${KUBE_PS1_COLOR_CONTEXT}$KUBE_PS1_CONTEXT${reset_color}"
-  KUBE_PS1+="$KUBE_PS1_DIVIDER"
-  KUBE_PS1+="${KUBE_PS1_COLOR_NS}$KUBE_PS1_NAMESPACE${reset_color}"
-  KUBE_PS1+="$KUBE_PS1_SUFFIX"
+
+  # Context
+  if [[ "${KUBE_PS1_CTX_ENABLE}" == true ]]; then
+    KUBE_PS1+="${KUBE_PS1_COLOR_CONTEXT}$KUBE_PS1_CONTEXT${reset_color}"
+  fi
+
+  # Namespace
+    if [[ "${KUBE_PS1_NS_ENABLE}" == true ]]; then
+    if [[ -n "${KUBE_PS1_DIVIDER}" ]] && [[ "${KUBE_PS1_CTX_ENABLE}" == true ]]; then
+      KUBE_PS1+="${KUBE_PS1_DIVIDER}"
+    fi
+    KUBE_PS1+="${KUBE_PS1_COLOR_NS}$KUBE_PS1_NAMESPACE${reset_color}"
+  fi
+
+  # Suffix
+  [[ -n "${KUBE_PS1_SUFFIX}" ]] && KUBE_PS1+="${KUBE_PS1_SUFFIX}"
+
 
   echo "${KUBE_PS1}"
 }

@@ -1,6 +1,6 @@
 # Kubernetes prompt for zsh
 
-A Kubernetes zsh prompt that displays the current cluster cluster
+A Kubernetes zsh prompt that displays the current cluster context
 and the namespace.
 
 Inspired by several tools used to simplify usage of kubectl
@@ -61,7 +61,7 @@ Note: The `PROMPT` example above was tested with the theme `robbyrussell`.
 
 ## Enabling / Disabling on the current shell
 
-Sometimes the kubernetes information can be anoying, you can easily 
+Sometimes the kubernetes information can be anoying, you can easily
 switch it on and off with the following commands:
 
 ```shell
@@ -86,13 +86,21 @@ The default settings can be overridden in ~/.zshrc
 | :------- | :-----: | ------- |
 | `KUBE_PS1_BINARY` | `kubectl` | Default Kubernetes binary |
 | `KUBE_PS1_PREFIX` | `(` | Prompt opening character  |
-| `KUBE_PS1_SYMBOL_ENABLE` | `true ` | Display the prompt Symbol. If set to `false`, this will also disable `KUBE_PS1_SEPARATOR` |
-| `KUBE_PS1_SYMBOL_DEFAULT` | `⎈ ` | Default prompt symbol. Unicode `\u2388` |
+| `KUBE_PS1_SYMBOL_ENABLE` | `true` | Display the prompt Symbol. If set to `false`, this will also disable `KUBE_PS1_SEPARATOR` |
+| `KUBE_PS1_SYMBOL_DEFAULT` | `⎈` | Default prompt symbol. Unicode `\u2388` |
 | `KUBE_PS1_SYMBOL_USE_IMG` | `false` | ☸️  ,  Unicode `\u2638` as the prompt symbol |
+| `KUBE_PS1_CTX_ENABLE` | `true` | Display the context. If set to `false`, this will also disable `KUBE_PS1_SEPERATOR` |
 | `KUBE_PS1_NS_ENABLE` | `true` | Display the namespace. If set to `false`, this will also disable `KUBE_PS1_DIVIDER` |
+| `KUBE_PS1_CONTEXT_FUNCTION` | No default, must be user supplied | Function to customize how cluster context is displayed |
+| `KUBE_PS1_NAMESPACE_FUNCTION` | No default, must be user supplied | Function to customize how cluster namespace is displayed |
 | `KUBE_PS1_SEPERATOR` | `\|` | Separator between symbol and cluster name |
 | `KUBE_PS1_DIVIDER` | `:` | Separator between cluster and namespace |
 | `KUBE_PS1_SUFFIX` | `)` | Prompt closing character |
+
+### Color customization
+
+| Variable | Default | Meaning |
+| :------- | :-----: | ------- |
 | `KUBE_PS1_COLOR_SYMBOL` | `"%F{blue}"` | Custom color for the symbol |
 | `KUBE_PS1_COLOR_CONTEXT` | `"%F{red}"` | Custom color for the context |
 | `KUBE_PS1_COLOR_NS` | `"%F{cyan}"` | Custom color for the namespace |
